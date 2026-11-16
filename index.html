@@ -23,6 +23,7 @@
   button:disabled { opacity:.45; cursor:default; }
   #status { color:var(--mute); }
   #status.err { color:var(--bad); }
+  #status.ok { color:var(--ok); font-weight:600; }
   .meter { position:relative; height:18px; background:var(--bar); border-radius:5px; overflow:hidden; }
   .meter .fill { position:absolute; inset:0 auto 0 0; width:0; background:var(--accent); opacity:.85; }
   .meter .mark { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); opacity:.7; }
@@ -127,7 +128,7 @@ const $ = id => document.getElementById(id);
 let dev = null, timer = null, last = null, psMaxSeen = 200, sampling = null;
 const sliders = ["attack","close","release","pson","psoff","dlo","dhi"];
 
-function setStatus(t, err) { $("status").textContent = t; $("status").className = err ? "err" : ""; }
+function setStatus(t, err, ok) { $("status").textContent = t; $("status").className = err ? "err" : ok ? "ok" : ""; }
 function say(el, t, cls) { el.textContent = t; el.className = cls || "hint"; }
 
 if (!navigator.usb) {
@@ -148,7 +149,7 @@ async function open(d) {
   await dev.open();
   if (dev.configuration === null) await dev.selectConfiguration(1);
   await dev.claimInterface(0);
-  setStatus("Connected to " + (dev.productName || "Optogate") + ".");
+  setStatus("Connected to " + (dev.productName || "Optogate") + ".", false, true);
   $("connect").textContent = "Reconnect";
   for (const id of ["live","teach","settings"]) $(id).hidden = false;
   const s = await readStatus();
