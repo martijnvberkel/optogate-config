@@ -10,93 +10,109 @@
     :root { --bg:#14171a; --card:#1d2125; --ink:#e8eaed; --mute:#9aa3ad; --line:#2c3238; --accent:#6ea0ff; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --bar:#2a3037; }
   }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
-  main { max-width:640px; margin:0 auto; padding:16px; }
-  h1 { font-size:1.35rem; margin:8px 0 14px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  button { font:inherit; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.35 system-ui, sans-serif; }
+  main { max-width:980px; margin:0 auto; padding:10px 14px; }
+  header { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  h1 { font-size:1.1rem; margin:0 8px 0 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .top { display:grid; grid-template-columns:1.6fr 1fr; gap:10px; margin-bottom:10px; }
+  .cols { display:grid; grid-template-columns:repeat(3, 1fr); gap:0 22px; }
+  h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; color:var(--mute); margin:0 0 6px; font-weight:600; }
+  button { font:inherit; padding:6px 12px; border-radius:7px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
   button:disabled { opacity:.45; cursor:default; }
   #status { color:var(--mute); }
   #status.err { color:var(--bad); }
-  .meter { position:relative; height:26px; background:var(--bar); border-radius:6px; overflow:hidden; margin:8px 0 4px; }
+  .meter { position:relative; height:18px; background:var(--bar); border-radius:5px; overflow:hidden; }
   .meter .fill { position:absolute; inset:0 auto 0 0; width:0; background:var(--accent); opacity:.85; }
   .meter .mark { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); opacity:.7; }
-  .legend { display:flex; justify-content:space-between; color:var(--mute); font-size:.85rem; }
-  .big { font-size:1.6rem; font-weight:600; font-variant-numeric:tabular-nums; }
-  .gate { display:flex; align-items:center; gap:10px; margin-top:10px; }
-  .gate .meter { flex:1; margin:0; height:14px; }
+  .live { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; align-items:center; }
+  .big { font-size:1.35rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.1; }
+  .hint { color:var(--mute); font-size:.8rem; }
   .gate .fill { background:var(--ok); }
-  .set { display:grid; grid-template-columns:1fr auto; gap:2px 12px; margin:14px 0; }
+  .set { margin:0 0 9px; }
+  .set .l { display:flex; justify-content:space-between; gap:8px; }
   .set label { font-weight:600; }
-  .set output { font-variant-numeric:tabular-nums; color:var(--mute); text-align:right; }
-  .set input[type=range] { grid-column:1 / -1; width:100%; accent-color:var(--accent); }
-  .set small { grid-column:1 / -1; color:var(--mute); }
-  .hint { color:var(--mute); font-size:.9rem; }
-  #msg { min-height:1.4em; margin-top:8px; }
-  #msg.ok { color:var(--ok); } #msg.err { color:var(--bad); } #msg.warn { color:var(--warn); }
+  .set output { font-variant-numeric:tabular-nums; color:var(--mute); }
+  .set input[type=range] { width:100%; margin:2px 0 0; accent-color:var(--accent); }
+  .actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:2px; }
+  .teachbtns { display:flex; flex-direction:column; gap:6px; margin:6px 0; }
+  #msg, #msg2 { min-height:1.2em; }
+  .ok { color:var(--ok); } .err { color:var(--bad); } .warn { color:var(--warn); }
+  @media (max-width:760px) { .top, .cols { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>Optogate settings</h1>
+  <header>
+    <h1>Optogate</h1>
+    <button id="connect" class="primary">Connect</button>
+    <span id="status">Not connected.</span>
+    <span class="hint" id="support" hidden></span>
+  </header>
 
-  <div class="card">
-    <div class="row">
-      <button id="connect" class="primary">Connect</button>
-      <span id="status">Not connected.</span>
+  <div class="top">
+    <div class="card" id="live" hidden>
+      <h2>Live</h2>
+      <div class="live">
+        <div><span class="hint">Sensor</span><div class="big" id="psval">0</div></div>
+        <div>
+          <div class="meter" id="psmeter"><div class="fill" id="psfill"></div><div class="mark" id="markoff" title="stays open above"></div><div class="mark" id="markon" title="opens above"></div></div>
+          <div class="hint" style="text-align:right">scale 0 - <span id="psmax"></span></div>
+        </div>
+        <div><span class="hint">Gate</span><div class="big" id="gatestate">-</div></div>
+        <div class="meter gate"><div class="fill" id="gatefill"></div></div>
+      </div>
     </div>
-    <p class="hint" id="support" hidden></p>
-  </div>
 
-  <div class="card" id="live" hidden>
-    <div class="row" style="justify-content:space-between">
-      <div><span class="hint">Sensor reading</span><div class="big" id="psval">0</div></div>
-      <div style="text-align:right"><span class="hint">Gate</span><div class="big" id="gatestate">-</div></div>
+    <div class="card" id="teach" hidden>
+      <h2>Quick sensitivity setup</h2>
+      <div class="teachbtns">
+        <button id="teachIdle" title="Hold still for 2 s with nobody near">1. Nobody near</button>
+        <button id="teachNear" title="Hold still for 2 s with a person at the opening distance">2. Person at opening distance</button>
+      </div>
+      <div id="msg" class="hint">Each step takes about 2 seconds.</div>
     </div>
-    <div class="meter" id="psmeter"><div class="fill" id="psfill"></div><div class="mark" id="markoff" title="release"></div><div class="mark" id="markon" title="open"></div></div>
-    <div class="legend"><span>0</span><span id="psmax"></span></div>
-    <div class="gate"><span class="hint">Opening</span><div class="meter"><div class="fill" id="gatefill"></div></div></div>
-  </div>
-
-  <div class="card" id="teach" hidden>
-    <strong>Quick sensitivity setup</strong>
-    <p class="hint">Hold still for about 2 seconds at each step. The page sets both thresholds for you.</p>
-    <div class="row">
-      <button id="teachIdle">1. Nobody near</button>
-      <button id="teachNear">2. Person at the opening distance</button>
-    </div>
-    <div id="msg"></div>
   </div>
 
   <div class="card" id="settings" hidden>
-    <strong>Timing</strong>
-    <div class="set"><label for="attack">Attack (fade in)</label><output id="attack_o"></output>
-      <input type="range" id="attack" min="1" max="1500" step="1"><small>How long the gate takes to open once someone is detected.</small></div>
-    <div class="set"><label for="close">Close delay (hold time)</label><output id="close_o"></output>
-      <input type="range" id="close" min="0" max="15000" step="50"><small>How long the gate stays open after the person has left.</small></div>
-    <div class="set"><label for="release">Release (fade out)</label><output id="release_o"></output>
-      <input type="range" id="release" min="0" max="1500" step="1"><small>How long the gate takes to close after the hold time. 0 = instant.</small></div>
-
-    <strong>Sensor</strong>
-    <div class="set"><label for="pson">Opens above</label><output id="pson_o"></output>
-      <input type="range" id="pson" min="1" max="2000" step="1"><small>Lower = opens from farther away.</small></div>
-    <div class="set"><label for="psoff">Stays open above</label><output id="psoff_o"></output>
-      <input type="range" id="psoff" min="1" max="2000" step="1"><small>Keep this below the opening value so the gate does not flutter.</small></div>
-
-    <strong>Gate LED range</strong>
-    <div class="set"><label for="dlo">Lowest drive when opening</label><output id="dlo_o"></output>
-      <input type="range" id="dlo" min="0" max="99" step="1"><small>The photoMOS only starts to open above this LED level. Raise it if the fade has a dead time at the start.</small></div>
-    <div class="set"><label for="dhi">Full drive</label><output id="dhi_o"></output>
-      <input type="range" id="dhi" min="1" max="100" step="1"></div>
-
-    <div class="row">
-      <button id="save" class="primary">Save to device</button>
-      <button id="defaults">Reset to defaults</button>
+    <div class="cols">
+      <div>
+        <h2>Timing</h2>
+        <div class="set" title="How long the gate takes to open once someone is detected.">
+          <div class="l"><label for="attack">Attack (fade in)</label><output id="attack_o"></output></div>
+          <input type="range" id="attack" min="1" max="1500" step="1"></div>
+        <div class="set" title="How long the gate stays open after the person has left.">
+          <div class="l"><label for="close">Close delay (hold)</label><output id="close_o"></output></div>
+          <input type="range" id="close" min="0" max="15000" step="50"></div>
+        <div class="set" title="How long the gate takes to close after the hold time. 0 = instant.">
+          <div class="l"><label for="release">Release (fade out)</label><output id="release_o"></output></div>
+          <input type="range" id="release" min="0" max="1500" step="1"></div>
+      </div>
+      <div>
+        <h2>Sensor</h2>
+        <div class="set" title="Sensor counts above which the gate opens. Lower = opens from farther away.">
+          <div class="l"><label for="pson">Opens above</label><output id="pson_o"></output></div>
+          <input type="range" id="pson" min="1" max="2000" step="1"></div>
+        <div class="set" title="Keep this below the opening value so the gate does not flutter.">
+          <div class="l"><label for="psoff">Stays open above</label><output id="psoff_o"></output></div>
+          <input type="range" id="psoff" min="1" max="2000" step="1"></div>
+      </div>
+      <div>
+        <h2>Gate LED range</h2>
+        <div class="set" title="The photoMOS only starts to open above this LED level. Raise it if the fade has a dead time at the start.">
+          <div class="l"><label for="dlo">Lowest drive</label><output id="dlo_o"></output></div>
+          <input type="range" id="dlo" min="0" max="99" step="1"></div>
+        <div class="set">
+          <div class="l"><label for="dhi">Full drive</label><output id="dhi_o"></output></div>
+          <input type="range" id="dhi" min="1" max="100" step="1"></div>
+      </div>
     </div>
-    <p class="hint">Changes act immediately. "Save to device" keeps them when the power is off.</p>
-    <div id="msg2"></div>
+    <div class="actions">
+      <button id="save" class="primary" title="Keeps the settings when the power is off">Save to device</button>
+      <button id="defaults">Reset to defaults</button>
+      <span id="msg2" class="hint">Changes act immediately; Save keeps them after power-off.</span>
+    </div>
   </div>
 </main>
 
@@ -112,7 +128,7 @@ let dev = null, timer = null, last = null, psMaxSeen = 200, sampling = null;
 const sliders = ["attack","close","release","pson","psoff","dlo","dhi"];
 
 function setStatus(t, err) { $("status").textContent = t; $("status").className = err ? "err" : ""; }
-function say(el, t, cls) { el.textContent = t; el.className = cls || ""; }
+function say(el, t, cls) { el.textContent = t; el.className = cls || "hint"; }
 
 if (!navigator.usb) {
   $("connect").disabled = true;
@@ -213,13 +229,8 @@ for (const n of sliders) {
 }
 async function push(n) {
   if (!dev) return;
-  try {
-    // order matters for the paired values, the firmware range-checks each one
-    if (n === "dhi") await sendSet("dhi", +$("dhi").value);
-    else if (n === "dlo") await sendSet("dlo", +$("dlo").value);
-    else await sendSet(n, +$(n).value);
-    say($("msg2"), "");
-  } catch (e) { say($("msg2"), "The board rejected " + n + ".", "err"); }
+  try { await sendSet(n, +$(n).value); say($("msg2"), "Changes act immediately; Save keeps them after power-off."); }
+  catch (e) { say($("msg2"), "The board rejected " + n + ".", "err"); }
 }
 
 // ---- teach buttons
@@ -245,7 +256,7 @@ $("teachNear").onclick = async () => {
     if (idleVal === null) { say($("msg"), "Do step 1 first.", "warn"); return; }
     const c = await capture("Measuring with a person at the opening distance");
     const gap = c.med - idleVal;
-    if (gap < 15) { say($("msg"), "The two readings are too close (" + idleVal + " and " + c.med + "). Move closer or check the sensor.", "warn"); return; }
+    if (gap < 15) { say($("msg"), "Readings too close (" + idleVal + " and " + c.med + "). Move closer or check the sensor.", "warn"); return; }
     const on = Math.round(idleVal + 0.5 * gap), off = Math.round(idleVal + 0.3 * gap);
     $("pson").value = on; $("psoff").value = off; showVal("pson"); showVal("psoff");
     await sendSet("pson", on); await sendSet("psoff", off);
