@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optogate Settings</title>
+<style>
+  :root { --bg:#f5f6f8; --card:#fff; --ink:#1c2024; --mute:#667085; --line:#e3e6ea; --accent:#2563eb; --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --bar:#e8ebef; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14171a; --card:#1d2125; --ink:#e8eaed; --mute:#9aa3ad; --line:#2c3238; --accent:#6ea0ff; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --bar:#2a3037; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.35rem; margin:8px 0 14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  button { font:inherit; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button:disabled { opacity:.45; cursor:default; }
+  #status { color:var(--mute); }
+  #status.err { color:var(--bad); }
+  .meter { position:relative; height:26px; background:var(--bar); border-radius:6px; overflow:hidden; margin:8px 0 4px; }
+  .meter .fill { position:absolute; inset:0 auto 0 0; width:0; background:var(--accent); opacity:.85; }
+  .meter .mark { position:absolute; top:0; bottom:0; width:2px; background:var(--ink); opacity:.7; }
+  .legend { display:flex; justify-content:space-between; color:var(--mute); font-size:.85rem; }
+  .big { font-size:1.6rem; font-weight:600; font-variant-numeric:tabular-nums; }
+  .gate { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .gate .meter { flex:1; margin:0; height:14px; }
+  .gate .fill { background:var(--ok); }
+  .set { display:grid; grid-template-columns:1fr auto; gap:2px 12px; margin:14px 0; }
+  .set label { font-weight:600; }
+  .set output { font-variant-numeric:tabular-nums; color:var(--mute); text-align:right; }
+  .set input[type=range] { grid-column:1 / -1; width:100%; accent-color:var(--accent); }
+  .set small { grid-column:1 / -1; color:var(--mute); }
+  .hint { color:var(--mute); font-size:.9rem; }
+  #msg { min-height:1.4em; margin-top:8px; }
+  #msg.ok { color:var(--ok); } #msg.err { color:var(--bad); } #msg.warn { color:var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Optogate settings</h1>
+
+  <div class="card">
+    <div class="row">
+      <button id="connect" class="primary">Connect</button>
+      <span id="status">Not connected.</span>
+    </div>
+    <p class="hint" id="support" hidden></p>
+  </div>
+
+  <div class="card" id="live" hidden>
+    <div class="row" style="justify-content:space-between">
+      <div><span class="hint">Sensor reading</span><div class="big" id="psval">0</div></div>
+      <div style="text-align:right"><span class="hint">Gate</span><div class="big" id="gatestate">-</div></div>
+    </div>
+    <div class="meter" id="psmeter"><div class="fill" id="psfill"></div><div class="mark" id="markoff" title="release"></div><div class="mark" id="markon" title="open"></div></div>
+    <div class="legend"><span>0</span><span id="psmax"></span></div>
+    <div class="gate"><span class="hint">Opening</span><div class="meter"><div class="fill" id="gatefill"></div></div></div>
+  </div>
+
+  <div class="card" id="teach" hidden>
+    <strong>Quick sensitivity setup</strong>
+    <p class="hint">Hold still for about 2 seconds at each step. The page sets both thresholds for you.</p>
+    <div class="row">
+      <button id="teachIdle">1. Nobody near</button>
+      <button id="teachNear">2. Person at the opening distance</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card" id="settings" hidden>
+    <strong>Timing</strong>
+    <div class="set"><label for="attack">Attack (fade in)</label><output id="attack_o"></output>
+      <input type="range" id="attack" min="1" max="1500" step="1"><small>How long the gate takes to open once someone is detected.</small></div>
+    <div class="set"><label for="close">Close delay (hold time)</label><output id="close_o"></output>
+      <input type="range" id="close" min="0" max="15000" step="50"><small>How long the gate stays open after the person has left.</small></div>
+    <div class="set"><label for="release">Release (fade out)</label><output id="release_o"></output>
+      <input type="range" id="release" min="0" max="1500" step="1"><small>How long the gate takes to close after the hold time. 0 = instant.</small></div>
+
+    <strong>Sensor</strong>
+    <div class="set"><label for="pson">Opens above</label><output id="pson_o"></output>
+      <input type="range" id="pson" min="1" max="2000" step="1"><small>Lower = opens from farther away.</small></div>
+    <div class="set"><label for="psoff">Stays open above</label><output id="psoff_o"></output>
+      <input type="range" id="psoff" min="1" max="2000" step="1"><small>Keep this below the opening value so the gate does not flutter.</small></div>
+
+    <strong>Gate LED range</strong>
+    <div class="set"><label for="dlo">Lowest drive when opening</label><output id="dlo_o"></output>
+      <input type="range" id="dlo" min="0" max="99" step="1"><small>The photoMOS only starts to open above this LED level. Raise it if the fade has a dead time at the start.</small></div>
+    <div class="set"><label for="dhi">Full drive</label><output id="dhi_o"></output>
+      <input type="range" id="dhi" min="1" max="100" step="1"></div>
+
+    <div class="row">
+      <button id="save" class="primary">Save to device</button>
+      <button id="defaults">Reset to defaults</button>
+    </div>
+    <p class="hint">Changes act immediately. "Save to device" keeps them when the power is off.</p>
+    <div id="msg2"></div>
+  </div>
+</main>
+
+<script>
+"use strict";
+const VID = 0x1209, PID = 0x0001;
+const REQ_STATUS = 0x01, REQ_SET = 0x10, REQ_SAVE = 0x11, REQ_DEFAULTS = 0x12;
+const ID = { attack:0, close:1, release:2, dlo:3, dhi:4, pson:5, psoff:6 };
+const STATES = ["Closed", "Opening", "Open", "Closing"];
+const $ = id => document.getElementById(id);
+
+let dev = null, timer = null, last = null, psMaxSeen = 200, sampling = null;
+const sliders = ["attack","close","release","pson","psoff","dlo","dhi"];
+
+function setStatus(t, err) { $("status").textContent = t; $("status").className = err ? "err" : ""; }
+function say(el, t, cls) { el.textContent = t; el.className = cls || ""; }
+
+if (!navigator.usb) {
+  $("connect").disabled = true;
+  $("support").hidden = false;
+  $("support").textContent = "This browser has no WebUSB. Use Chrome or Edge on a computer, or Chrome on an Android phone.";
+}
+
+async function connect() {
+  try {
+    dev = await navigator.usb.requestDevice({ filters: [{ vendorId: VID, productId: PID }] });
+    await open(dev);
+  } catch (e) { setStatus("Could not connect: " + e.message, true); }
+}
+
+async function open(d) {
+  dev = d;
+  await dev.open();
+  if (dev.configuration === null) await dev.selectConfiguration(1);
+  await dev.claimInterface(0);
+  setStatus("Connected to " + (dev.productName || "Optogate") + ".");
+  $("connect").textContent = "Reconnect";
+  for (const id of ["live","teach","settings"]) $(id).hidden = false;
+  const s = await readStatus();
+  applyToSliders(s);
+  clearInterval(timer);
+  timer = setInterval(poll, 100);
+}
+
+async function readStatus() {
+  const r = await dev.controlTransferIn({ requestType:"vendor", recipient:"device", request:REQ_STATUS, value:0, index:0 }, 20);
+  if (r.status !== "ok" || r.data.byteLength < 20) throw new Error("bad status reply");
+  const v = r.data;
+  return {
+    sensor: v.getUint8(1), state: v.getUint8(2), flashErr: v.getUint8(3),
+    ps: v.getUint16(4, true), pos: v.getUint16(6, true),
+    attack: v.getUint16(8, true), close: v.getUint16(10, true), release: v.getUint16(12, true),
+    dlo: v.getUint8(14), dhi: v.getUint8(15), pson: v.getUint16(16, true), psoff: v.getUint16(18, true)
+  };
+}
+
+async function sendSet(name, value) {
+  const r = await dev.controlTransferOut({ requestType:"vendor", recipient:"device", request:REQ_SET, value:value, index:ID[name] });
+  if (r.status !== "ok") throw new Error("rejected");
+}
+async function sendCmd(req) {
+  const r = await dev.controlTransferOut({ requestType:"vendor", recipient:"device", request:req, value:0, index:0 });
+  if (r.status !== "ok") throw new Error("rejected");
+}
+
+function applyToSliders(s) {
+  for (const n of sliders) { $(n).value = s[n]; showVal(n); }
+  syncMarks(s);
+}
+function showVal(n) {
+  const v = +$(n).value;
+  const unit = (n === "dlo" || n === "dhi") ? " %" : (n === "pson" || n === "psoff") ? "" : " ms";
+  $(n + "_o").textContent = v + unit;
+}
+
+function syncMarks(s) {
+  const max = Math.max(psMaxSeen, s.pson * 1.5, 100);
+  $("markon").style.left = (100 * s.pson / max) + "%";
+  $("markoff").style.left = (100 * s.psoff / max) + "%";
+  $("psmax").textContent = Math.round(max);
+}
+
+async function poll() {
+  if (!dev) return;
+  try {
+    const s = await readStatus();
+    last = s;
+    if (s.ps > psMaxSeen) psMaxSeen = s.ps;
+    $("psval").textContent = s.ps;
+    const max = Math.max(psMaxSeen, s.pson * 1.5, 100);
+    $("psfill").style.width = Math.min(100, 100 * s.ps / max) + "%";
+    $("gatestate").textContent = s.sensor ? STATES[s.state] : "No sensor";
+    $("gatefill").style.width = (s.pos / 10) + "%";
+    syncMarks({ pson: +$("pson").value, psoff: +$("psoff").value });
+    if (sampling) sampling.push(s.ps);
+  } catch (e) {
+    clearInterval(timer); dev = null;
+    setStatus("Disconnected. Plug the board in and press Connect.", true);
+  }
+}
+
+// ---- sliders: send on change, keep dependent limits consistent
+let pending = {};
+for (const n of sliders) {
+  $(n).addEventListener("input", () => {
+    if (n === "dlo" && +$("dlo").value >= +$("dhi").value) $("dlo").value = +$("dhi").value - 1;
+    if (n === "dhi" && +$("dhi").value <= +$("dlo").value) $("dhi").value = +$("dlo").value + 1;
+    if (n === "psoff" && +$("psoff").value > +$("pson").value) $("psoff").value = $("pson").value;
+    if (n === "pson" && +$("pson").value < +$("psoff").value) $("pson").value = $("psoff").value;
+    showVal(n);
+    clearTimeout(pending[n]);
+    pending[n] = setTimeout(() => push(n), 80);
+  });
+}
+async function push(n) {
+  if (!dev) return;
+  try {
+    // order matters for the paired values, the firmware range-checks each one
+    if (n === "dhi") await sendSet("dhi", +$("dhi").value);
+    else if (n === "dlo") await sendSet("dlo", +$("dlo").value);
+    else await sendSet(n, +$(n).value);
+    say($("msg2"), "");
+  } catch (e) { say($("msg2"), "The board rejected " + n + ".", "err"); }
+}
+
+// ---- teach buttons
+let idleVal = null;
+function median(a) { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; }
+async function capture(label) {
+  say($("msg"), label + " ...");
+  sampling = [];
+  await new Promise(r => setTimeout(r, 2000));
+  const s = sampling; sampling = null;
+  if (s.length < 5) throw new Error("no readings");
+  return { med: median(s), max: Math.max(...s) };
+}
+$("teachIdle").onclick = async () => {
+  try {
+    const c = await capture("Measuring with nobody near");
+    idleVal = c.max;
+    say($("msg"), "Nobody near: highest reading " + c.max + ". Now step 2.", "ok");
+  } catch (e) { say($("msg"), e.message, "err"); }
+};
+$("teachNear").onclick = async () => {
+  try {
+    if (idleVal === null) { say($("msg"), "Do step 1 first.", "warn"); return; }
+    const c = await capture("Measuring with a person at the opening distance");
+    const gap = c.med - idleVal;
+    if (gap < 15) { say($("msg"), "The two readings are too close (" + idleVal + " and " + c.med + "). Move closer or check the sensor.", "warn"); return; }
+    const on = Math.round(idleVal + 0.5 * gap), off = Math.round(idleVal + 0.3 * gap);
+    $("pson").value = on; $("psoff").value = off; showVal("pson"); showVal("psoff");
+    await sendSet("pson", on); await sendSet("psoff", off);
+    say($("msg"), "Set: opens above " + on + ", stays open above " + off + ". Press Save to keep it.", "ok");
+  } catch (e) { say($("msg"), e.message, "err"); }
+};
+
+function withTimeout(p, ms, what) {
+  return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + " got no answer within " + ms + " ms")), ms))]);
+}
+$("save").onclick = async () => {
+  say($("msg2"), "Saving ...");
+  const stage = [];
+  try {
+    await withTimeout(sendCmd(REQ_SAVE), 3000, "the save command"); stage.push("command sent");
+    await new Promise(r => setTimeout(r, 700));
+    const s = await withTimeout(readStatus(), 3000, "the status read after saving"); stage.push("status read");
+    say($("msg2"), s.flashErr ? "Saving failed (the chip could not verify what it wrote). Try again." : "Saved to the device.", s.flashErr ? "err" : "ok");
+  } catch (e) { say($("msg2"), "Save problem after [" + stage.join(", ") + "]: " + e.message, "err"); }
+};
+$("defaults").onclick = async () => {
+  try { await sendCmd(REQ_DEFAULTS); applyToSliders(await readStatus()); say($("msg2"), "Defaults loaded. Not saved yet.", "ok"); }
+  catch (e) { say($("msg2"), e.message, "err"); }
+};
+
+$("connect").onclick = connect;
+if (navigator.usb) {
+  navigator.usb.getDevices().then(ds => { const d = ds.find(x => x.vendorId === VID && x.productId === PID); if (d) open(d).catch(() => {}); });
+  navigator.usb.addEventListener("disconnect", () => { if (dev) { clearInterval(timer); dev = null; setStatus("Disconnected. Plug the board in and press Connect.", true); } });
+}
+</script>
+</body>
+</html>
