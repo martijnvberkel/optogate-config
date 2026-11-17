@@ -98,6 +98,12 @@
         <div class="set" title="Keep this below the opening value so the gate does not flutter.">
           <div class="l"><label for="psoff">Stays open above</label><output id="psoff_o"></output></div>
           <input type="range" id="psoff" min="1" max="2000" step="1"></div>
+        <div class="set" title="IR pulses per measurement. More pulses = stronger reading from farther away, but the sensor LED draws proportionally more current from the phantom line.">
+          <div class="l"><label for="mps">Sensor pulses</label><output id="mps_o"></output></div>
+          <input type="range" id="mps" min="0" max="3" step="1"></div>
+        <div class="set" title="How often the sensor measures. Slower = less LED current from the phantom line, but a slower response. It does not change the reading.">
+          <div class="l"><label for="sduty">Sensor duty</label><output id="sduty_o"></output></div>
+          <input type="range" id="sduty" min="0" max="3" step="1"></div>
       </div>
       <div>
         <h2>Gate LED range</h2>
@@ -121,12 +127,14 @@
 "use strict";
 const VID = 0x1209, PID = 0x0001;
 const REQ_STATUS = 0x01, REQ_SET = 0x10, REQ_SAVE = 0x11, REQ_DEFAULTS = 0x12;
-const ID = { attack:0, close:1, release:2, dlo:3, dhi:4, pson:5, psoff:6 };
+const ID = { attack:0, close:1, release:2, dlo:3, dhi:4, pson:5, psoff:6, mps:7, sduty:8 };
+const MPS_LABEL = ["1 pulse", "2 pulses", "4 pulses", "8 pulses"];
+const DUTY_LABEL = ["1/160 (fast)", "1/320", "1/640", "1/1280 (slow, low current)"];
 const STATES = ["Closed", "Opening", "Open", "Closing"];
 const $ = id => document.getElementById(id);
 
 let dev = null, timer = null, last = null, psMaxSeen = 200, sampling = null;
-const sliders = ["attack","close","release","pson","psoff","dlo","dhi"];
+const sliders = ["attack","close","release","pson","psoff","dlo","dhi","mps","sduty"];
 
 function setStatus(t, err, ok) { $("status").textContent = t; $("status").className = err ? "err" : ok ? "ok" : ""; }
 function say(el, t, cls) { el.textContent = t; el.className = cls || "hint"; }
@@ -159,14 +167,15 @@ async function open(d) {
 }
 
 async function readStatus() {
-  const r = await dev.controlTransferIn({ requestType:"vendor", recipient:"device", request:REQ_STATUS, value:0, index:0 }, 20);
-  if (r.status !== "ok" || r.data.byteLength < 20) throw new Error("bad status reply");
+  const r = await dev.controlTransferIn({ requestType:"vendor", recipient:"device", request:REQ_STATUS, value:0, index:0 }, 22);
+  if (r.status !== "ok" || r.data.byteLength < 22) throw new Error("bad status reply (old firmware? flash the new one)");
   const v = r.data;
   return {
     sensor: v.getUint8(1), state: v.getUint8(2), flashErr: v.getUint8(3),
     ps: v.getUint16(4, true), pos: v.getUint16(6, true),
     attack: v.getUint16(8, true), close: v.getUint16(10, true), release: v.getUint16(12, true),
-    dlo: v.getUint8(14), dhi: v.getUint8(15), pson: v.getUint16(16, true), psoff: v.getUint16(18, true)
+    dlo: v.getUint8(14), dhi: v.getUint8(15), pson: v.getUint16(16, true), psoff: v.getUint16(18, true),
+    mps: v.getUint8(20), sduty: v.getUint8(21)
   };
 }
 
@@ -185,6 +194,8 @@ function applyToSliders(s) {
 }
 function showVal(n) {
   const v = +$(n).value;
+  if (n === "mps") { $("mps_o").textContent = MPS_LABEL[v]; return; }
+  if (n === "sduty") { $("sduty_o").textContent = DUTY_LABEL[v]; return; }
   const unit = (n === "dlo" || n === "dhi") ? " %" : (n === "pson" || n === "psoff") ? "" : " ms";
   $(n + "_o").textContent = v + unit;
 }
